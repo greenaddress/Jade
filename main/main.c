@@ -206,12 +206,29 @@ static void validate_running_image(void)
     }
 }
 
+#include <hal/cpu_hal.h>
+#include <wally_bip39.h>
+static const char TEST_MNEMONIC[] = "fish inner face ginger orchard permit useful method fence kidney chuckle party "
+                                    "favorite sunset draw limb science crane oval letter slot invite sadness banana";
 void app_main(void)
 {
+    uint8_t output[SHA512_LEN];
+    size_t written;
+
+    const size_t t1 = cpu_hal_get_cycle_count();
+    const int ret = bip39_mnemonic_to_seed(TEST_MNEMONIC, NULL, output, sizeof(output), &written);
+    const size_t t2 = cpu_hal_get_cycle_count();
+    JADE_ASSERT(ret == WALLY_OK && written == sizeof(output));
+    const size_t mcycles_elapsed = (t2 - t1) / 1000000;
+
     ensure_boot_flags();
     random_start_collecting();
     boot_process();
     sensitive_assert_empty();
     validate_running_image();
+
+    JADE_LOGW("Mcycles to bip39_mnemonic_to_seed(24words): %u - %s", mcycles_elapsed,
+        mcycles_elapsed > 550 ? "FAIL" : "PASS");
+
     start_dashboard();
 }
